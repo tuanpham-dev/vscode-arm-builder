@@ -11,9 +11,8 @@ I'm not happy with the `arm` builds from headmelted and vscodium because they do
 Clone this repo and change directory to repo folder.
 
 ### Build locally
-1. Run `chmod +x ./build.sh`
-2. Run `./build.sh`
-3. Wait for complete (1 hour on my Raspberry Pi 4) and the `.deb` file is in `build` directory.
+1. Run `./build.sh`
+2. Wait for complete (1 hour on my Raspberry Pi 4) and the `.deb` file is in `build` directory.
 
 ### Build using Docker
 1. Run `docker-compose up --build` or `docker-compose run vscode-arm` or `docker-compose run vscode-arm64`

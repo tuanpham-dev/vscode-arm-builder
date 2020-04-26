@@ -50,7 +50,7 @@ echo "Checking out latest code version (tag)"
 git fetch --tags
 git checkout $(git describe --tags `git rev-list --tags --max-count=1`)
 
-echo "Applying patches
+echo "Applying patches"
 cp -rv ../resources/app/* .
 sed -i 's/.*darwinCredits.*//' product.json
 sed -i 's/.*electronRepository.*//' product.json
