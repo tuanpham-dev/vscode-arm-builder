@@ -1,0 +1,29 @@
+matrix:
+  include:
+    - os: linux
+      sudo: required
+      env: BUILDARCH=arm64
+      dist: trusty
+    - os: linux
+      sudo: required
+      env: BUILDARCH=arm
+      dist: trusty
+
+language: node_js
+node_js: "12"
+
+script:
+  - ./build.sh
+
+deploy:
+  provider: releases
+  skip_cleanup: true
+  overwrite: true
+  name: $LATEST_MS_TAG
+  api_key: $GITHUB_TOKEN
+  file_glob: true
+  file:
+    - ./build/*.deb
+  on:
+    all_branches: true
+    condition: $SHOULD_BUILD = yes

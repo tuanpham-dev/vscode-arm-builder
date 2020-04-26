@@ -1,0 +1,14 @@
+version: "3"
+services:
+  vscode-arm:
+    build:
+      context: .
+      dockerfile: Dockerfile-arm
+    volumes:
+      - ./build:/out
+  vscode-arm64:
+    build:
+      context: .
+      dockerfile: Dockerfile-arm64
+    volumes:
+      - ./build:/out

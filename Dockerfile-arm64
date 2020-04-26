@@ -1,0 +1,72 @@
+FROM arm64v8/ubuntu
+
+# Installing prerequisites
+ENV DEBIAN_FRONTEND=noninteractive 
+RUN apt-get update && apt-get -y install ca-certificates curl python g++ gcc make clang wget git jq imagemagick curl build-essential pkg-config libx11-dev libxkbfile-dev libsecret-1-dev fakeroot rpm
+
+# Installing NVM
+ENV NVM_DIR=/usr/.nvm
+ENV NODE_VERSION=12.16.2
+RUN mkdir -p $NVM_DIR
+RUN rm /bin/sh && ln -s /bin/bash /bin/sh
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
+RUN source $NVM_DIR/nvm.sh; \
+  nvm install $NODE_VERSION; \
+  nvm alias default $NODE_VERSION; \
+  nvm use default
+
+# Installing Nodejs
+ENV NODE_PATH=$NVM_DIR/versions/node/v$NODE_VERSION/lib/node_modules
+ENV PATH=$NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
+
+# Installing npm dependencies
+RUN npm install -g yarn gulp gulp-watch
+
+RUN mkdir /vscode
+RUN mkdir /out
+
+# Download official code linux and extracting resources
+RUN curl -L https://go.microsoft.com/fwlink/?LinkID=620884 > vscode-official.tar.gz
+RUN tar --strip-components=1 -xf vscode-official.tar.gz VSCode-linux-x64/resources/app/resources/linux/code.png VSCode-linux-x64/resources/app/product.json
+
+# Retrieving latest Visual Studio Code sources into /vscode
+RUN git clone "https://github.com/Microsoft/vscode.git" vscode
+
+# Entering vscode directory
+WORKDIR /vscode
+
+# Checking out latest code version (tag)
+RUN git fetch --tags
+RUN git checkout $(git describe --tags `git rev-list --tags --max-count=1`)
+
+# Applying patches
+RUN cp -rv ../resources/app/* .
+RUN sed -i 's/.*darwinCredits.*//' product.json
+RUN sed -i 's/.*electronRepository.*//' product.json
+RUN sed -i 's/max_old_space_size=[^\"]*/max_old_space_size=16000/g' package.json
+
+# Installing node modules
+RUN yarn --frozen-lockfile
+RUN yarn postinstall
+
+# Patching vscode-sqlite3 module
+RUN yarn add -D electron-rebuild
+RUN sed -i -z 's/,\n[^\n]*arm[^\n]*//' node_modules/vscode-sqlite3/binding.gyp
+RUN sed -i "s/Release\/sqlite'/Release\/sqlite.node'/" node_modules/vscode-sqlite3/lib/sqlite3.js
+RUN npx electron-rebuild -f -w vscode-sqlite3
+
+# Compiling vscode
+RUN yarn gulp compile-build
+# Compiling extensions
+RUN yarn gulp compile-extensions-build
+
+# Minifying vscode
+RUN yarn gulp minify-vscode
+RUN yarn gulp minify-vscode-web
+RUN yarn gulp vscode-linux-arm64-min-ci
+
+# Creating .deb package
+RUN apt-get install dpkg-dev
+RUN yarn gulp vscode-linux-arm64-build-deb
+
+ENTRYPOINT [ "sh", "-c", "cp -v /vscode/.build/linux/deb/arm64/deb/*.deb /out/" ]
